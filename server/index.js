@@ -3,17 +3,37 @@ const fs = require("fs");
 const path = require("path");
 const bodyParser = require('body-parser')
 const ServerRenderer = require("./renderer");
-var multer  = require('multer')
+var multer = require('multer')
 var storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, './uploads')
+    const { md5 } = req.body;
+
+    console.log(req.body, "jjjj", req.file)
+    let filePath = './uploads/' + md5;
+    fs.exists(filePath, (exists) => {
+      if(!exists){
+        fs.mkdir(filePath, function (err) {
+          if (err) {
+            return console.error(err);
+          }
+          cb(null, filePath)
+        });
+      }else{
+        cb(null, filePath)
+      }
+    })
+   
+
+
   },
   filename: function (req, file, cb) {
-    cb(null, file.fieldname + '-' + Date.now()+'.pdf')
+    const { index } = req.body;
+    console.log(req.body, "kkkkkk")
+    cb(null, index + '.pdf')
   }
 })
 // var upload = multer({ storage: storage })
-var upload = multer({ dest: './uploads/' })
+var upload = multer({ storage: storage })
 const app = express();
 // const urlencodedParser = bodyParser.urlencoded({ extended: false })
 const isProd = process.env.NODE_ENV === "production";
@@ -26,13 +46,13 @@ if (isProd) {
   app.use("/dist", express.static(path.join(__dirname, "../dist")));
 
   let bundle = require("../dist/server-bundle.json");
-  let clientManifest = require("../dist/client-manifest.json"); 
+  let clientManifest = require("../dist/client-manifest.json");
   renderer = new ServerRenderer(bundle, template, clientManifest);
 } else {
   readyPromise = require("./dev-server")(app, (
     bundle,
     clientManifest) => {
-      renderer = new ServerRenderer(bundle, template, clientManifest);
+    renderer = new ServerRenderer(bundle, template, clientManifest);
   });
 }
 // app.use(urlencodedParser);
@@ -58,7 +78,7 @@ const render = (req, res) => {
   // 此对象会合并然后传给服务端路由，不需要可不传
   const context = {};
 
-  renderer.renderToString(req, context).then(({error, html}) => {
+  renderer.renderToString(req, context).then(({ error, html }) => {
     if (error) {
       if (error.url) {
         res.redirect(error.url);
@@ -78,13 +98,12 @@ app.all(/^(?!\/api).*/, isProd ? render : (req, res) => {
   console.log("render")
   readyPromise.then(() => render(req, res));
 });
-app.get('/api/hello',(req, res)=>{
+app.get('/api/hello', (req, res) => {
   res.send('Hello World');
 })
 // 上传处理
-app.post('/api/upload',upload.single('file'),(req, res)=>{
+app.post('/api/upload', upload.single('file'), (req, res) => {
   console.log(req.body);
-  console.log(req.files);
   res.send('JSON.stringify(result)');
 })
 app.listen(3000, () => {

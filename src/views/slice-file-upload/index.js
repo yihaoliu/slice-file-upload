@@ -14,17 +14,20 @@ export default class SliceFlieUpload {
 		let hash = await this.getMd5(this.file)
 		const blobSlice = File.prototype.slice || File.prototype.mozSlice || File.prototype.webkitSlice;
 		const fileUploads = []
+		console.log(this.file,"jjjjj")
 		for (let i = 0; i < this.total; i++) {
 			const start = i * this.unitSize;
 			const end = Math.min(this.fileSize, start + this.unitSize);
+
 			fileUploads.push(ajax({
 				url: this.url,
 				data: {
 					md5: hash,
-					file: blobSlice.call(this.file, start, end),
+					// type:
 					index: i,
 					size: this.fileSize,
-					total: this.total
+					total: this.total,
+					file: blobSlice.call(this.file, start, end),
 				}
 			}))
 		}
